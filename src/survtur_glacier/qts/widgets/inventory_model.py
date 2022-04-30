@@ -58,6 +58,7 @@ class InventoryModel(InventoryModelBase):
 
     def set_inventory(self, db_file: str):
         self._inventory = Inventory(db_file)
+        self._current_path = ""
         self.rebuild_data()
 
     def apply_filter(self, f: str):

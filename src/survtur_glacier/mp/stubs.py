@@ -9,6 +9,7 @@ class TaskPriority(enum.IntEnum):
     CREATE_DIRECTORY = 10
     DOWNLOAD_FILE = 20
     UPLOAD_FILE = 20
+    INITIATE_UPLOAD = 30
 
 
 class TaskType(enum.Enum):

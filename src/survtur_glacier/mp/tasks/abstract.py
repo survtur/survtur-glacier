@@ -97,7 +97,7 @@ class AbstractTransferTask(AbstractTask, ABC):
         """
 
         now = time.time()
-        if now - self.last_transfer_progress < interval:
+        if (now - self.last_transfer_progress) < interval:
             return
 
         hr_transferred = human_readable_bytes(transferred)
@@ -110,5 +110,5 @@ class AbstractTransferTask(AbstractTask, ABC):
             percent = 0
 
         s = f'{prefix}{hr_transferred}{percent_str}'
-
+        self.last_transfer_progress = now
         self.emit_progress(s, percent)

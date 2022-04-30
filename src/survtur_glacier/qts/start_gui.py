@@ -403,7 +403,7 @@ class SurvturGlacierGui(QtWidgets.QMainWindow, Ui_MainWindow):
                             group_id=id_gen.group_id(""),
                             name=name,
                             type=TaskType.ARCHIVE_UPLOAD,
-                            priority=TaskPriority.CREATE_DIRECTORY if is_dir else TaskPriority.UPLOAD_FILE,
+                            priority=TaskPriority.CREATE_DIRECTORY if is_dir else TaskPriority.INITIATE_UPLOAD,
                             category=TaskCategory.UPLOAD,
                             start_after=0,
                             created=datetime.datetime.now().timestamp())

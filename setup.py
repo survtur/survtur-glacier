@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="survtur-glacier",
-    version="2022.4a9",
+    version="2022.4a10",
     author="Alexander Chzhen",
     author_email="survtur@ya.ru",
     description="GUI to work with AWS Glacier (compatible with FastGlacier for Windows)",
