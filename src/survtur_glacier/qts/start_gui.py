@@ -95,13 +95,16 @@ class SurvturGlacierGui(QtWidgets.QMainWindow, Ui_MainWindow):
         self.inventoryView.files_dropped.connect(self.upload_desired)
         self.inventoryView.download_desired.connect(self.download_desired)
         self.newTasksTable.counters_update.connect(self.show_tasks_counters)
-        self.newTasksTable.delete_tasks.connect(self._gm.delete_tasks)
+        self.newTasksTable.delete_tasks_desire.connect(self._gm.delete_tasks)
+        self.newTasksTable.cancel_tasks_desire.connect(self._gm.add_tasks_to_cancel_list)
         self._inventory_model.current_path_changed.connect(self.currentPathTxt.setText)
         self.btnUpload.clicked.connect(self.pick_files_to_upload)
         self.btnMkdir.clicked.connect(self.make_dir_pressed)
 
     def _setup_shortcuts(self):
         QShortcut(QKeySequence("Ctrl+F"), self, self.searchLine.setFocus)
+
+        # This is the shortcut to add Dummy task for testing purpose
         QShortcut(QKeySequence("Ctrl+*"), self, self.add_sample_tasks)
 
     def _init_task_adder(self):
@@ -119,7 +122,6 @@ class SurvturGlacierGui(QtWidgets.QMainWindow, Ui_MainWindow):
         self.inventoryView.doubleClicked.connect(self._inventory_model.enter_into_index)
         self.inventoryView.enter_or_return.connect(self._inventory_model.enter_into_index)
 
-
         self.btnMkdir.setIcon(self.style().standardIcon(QStyle.SP_FileDialogNewFolder))
 
 
@@ -131,7 +133,7 @@ class SurvturGlacierGui(QtWidgets.QMainWindow, Ui_MainWindow):
         db_file = os.path.join(self._workdir, 'survtur_glaciers_tasks.sqlite3')
         self._gm = TasksGeneralManager(tasks_db=db_file, config=self._config)
         self._gm.tp_count = self._config.task_threads
-        self._gm.on_output = lambda x: self.progress.emit(x)
+        self._gm.on_output_callback = lambda x: self.progress.emit(x)
         self._gm.on_result = lambda x: self.result.emit(x)
         self._populate_tasks_list(self._gm.get_all_tasks_in_queue())
 

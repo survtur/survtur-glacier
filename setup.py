@@ -1,15 +1,19 @@
 import setuptools
+import sys
+
+sys.path.append("./src/")
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+import survtur_glacier
 
 setuptools.setup(
     name="survtur-glacier",
-    version="2022.4a10",
+    version=survtur_glacier.__version__,
     author="Alexander Chzhen",
     author_email="survtur@ya.ru",
-    description="GUI to work with AWS Glacier (compatible with FastGlacier for Windows)",
+    description="GUI to work with AWS Glacier cold storage",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/survtur/survtur-glacier",

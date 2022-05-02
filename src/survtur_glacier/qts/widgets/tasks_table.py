@@ -27,8 +27,9 @@ class TasksTable(QTableWidget):
     _rows_to_task_id: List[str] = []
     _status_to_show: ShowTasksThat = ShowTasksThat.ACTIVE
 
-    delete_tasks = QtCore.pyqtSignal(list)
+    delete_tasks_desire = QtCore.pyqtSignal(list)
     counters_update = QtCore.pyqtSignal(dict)
+    cancel_tasks_desire = QtCore.pyqtSignal(list)
 
     def __init__(self, parent: Optional[QWidget] = ...) -> None:
         super().__init__(parent)
@@ -84,7 +85,8 @@ class TasksTable(QTableWidget):
             self._mark_task_with_color(t['meta']['id'], Qt.darkGreen)
         elif status == TaskStatus.ERROR:
             self._mark_task_with_color(t['meta']['id'], Qt.red)
-
+        elif status == TaskStatus.CANCELLED:
+            self._mark_task_with_color(t['meta']['id'], Qt.red)
         else:
             raise NotImplementedError(status)
 
@@ -183,7 +185,7 @@ class TasksTable(QTableWidget):
             if len(selection) > 1:
                 text += f" ({len(selection)})"
             cancel_selected = QAction(self._icon(QStyle.SP_DialogNoButton), text)
-            cancel_selected.triggered.connect(lambda: print(1/0))
+            cancel_selected.triggered.connect(self._want_to_cancel_tasks)
             menu.addAction(cancel_selected)
 
         if has_faulty and selection:
@@ -217,8 +219,15 @@ class TasksTable(QTableWidget):
 
         for task_id in for_del:
             self._quiet_remove_task(task_id)
-        self.delete_tasks.emit(for_del)
+        self.delete_tasks_desire.emit(for_del)
         self._recalculate_counters()
+
+    def _want_to_cancel_tasks(self):
+        for_cancel = []
+        for i in self._selected_rows():
+            for_cancel.append(self._rows_to_task_id[i])
+
+        self.cancel_tasks_desire.emit(for_cancel)
 
     def clear_all_succeed(self):
         for_del = []

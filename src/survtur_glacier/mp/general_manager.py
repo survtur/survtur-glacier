@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 import threading
+import time
 import typing
 from typing import List, Callable, Any
 
@@ -32,9 +33,14 @@ class TasksGeneralManager(threading.Thread):
     # Fills up with TaskProcessors and TaskAdder. Consumed by OutputProcessor.
 
     tp_count: int = 2
-    """Max quantity of task processors"""
+    """Max quantity of task processors. Default = 2"""
 
-    on_output: Callable[[TaskOutputDict], Any] = None
+    on_output_callback: Callable[[TaskOutputDict], Any] = None
+
+    tasks_to_cancel: typing.Dict[str, typing.Union[float, int]] = {}
+    # Tasks ids that user wants co cancel. With timestamp of putting items to cancel list.
+    # It is possible that task will be finished before cancellation to item will stay in this list forever.
+    # I use timestamp to remove too old items from this list.
 
     def get_all_tasks_in_queue(self) -> List[CommonTaskDict]:
         return self._tasks_queue.get_all_tasks_in_queue()
@@ -47,10 +53,11 @@ class TasksGeneralManager(threading.Thread):
 
     def run(self):
         self.output_queue = multiprocessing.Queue()
-
         self._task_processor_threads = []
+
         for _ in range(self.tp_count):
             tp = TasksProcessor()
+            tp.tasks_to_cancel = self.tasks_to_cancel
             tp.tasks_queue = self._tasks_queue
             tp.output_queue = self.output_queue
             tp.queue_of_tasks_to_be_added = self._queue_of_tasks_to_be_added
@@ -86,10 +93,27 @@ class TasksGeneralManager(threading.Thread):
         self._queue_of_tasks_to_be_added.put(d)
 
     def _on_output(self, x):
-        self.on_output(x)
+        self.on_output_callback(x)
 
     def find_tasks(self, *_, **kwargs) -> List[CommonTaskDict]:
         return self._tasks_queue.find_task(**kwargs)
 
     def delete_tasks(self, task_ids: List[str]):
         self._tasks_queue.delete_tasks(task_ids)
+
+    def add_tasks_to_cancel_list(self, task_ids: typing.Collection[str]):
+        """
+        Adds task_ids to cancel list and remove too old elements from it.
+        """
+        _logger.info(f"Cancelling tasks: {task_ids}")
+        self.tasks_to_cancel.update({t: time.time() for t in task_ids})
+
+        with threading.RLock():
+            to_clean = []
+            now = time.time()
+            for task_id, created_timestamp in self.tasks_to_cancel.items():
+                if now - time.time() > 600:
+                    to_clean.append(task_id)
+            for t in to_clean:
+                _logger.warning(f"Removing task {t} from tasks_to_cancel list. Too old request.")
+                del self.tasks_to_cancel[t]

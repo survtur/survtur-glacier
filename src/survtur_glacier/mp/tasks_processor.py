@@ -1,12 +1,13 @@
 import logging
 import multiprocessing
 import threading
-from typing import Optional
+import time
+from typing import Optional, Dict
 
-from ..common.config import Config
-from .sqlite_tasks_queue import SqliteTasksQueue, QueueExit
 from .one_task import process_task
-from .stubs import TaskOutputDict, CommonTaskDict
+from .sqlite_tasks_queue import SqliteTasksQueue, QueueExit
+from .stubs import TaskOutputDict, CommonTaskDict, TaskStatus
+from ..common.config import Config
 
 _logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class TasksProcessor(threading.Thread):
     current_process: Optional[multiprocessing.Process] = None
     current_task_id: str = ""
     config: Config
+    tasks_to_cancel: Dict[str, int]
 
     def run(self):
         while True:
@@ -36,15 +38,31 @@ class TasksProcessor(threading.Thread):
             self.current_process = p
             self.current_task_id = d['meta']['id']
             p.start()
-            p.join()
+            manually_terminated = False
+            while True:
+
+                if self.current_task_id in self.tasks_to_cancel:
+                    del self.tasks_to_cancel[self.current_task_id]
+                    p.terminate()
+                    self._emit_error(d)
+                    manually_terminated = True
+                    break
+
+                time.sleep(0.5)
+                if not p.is_alive():
+                    break
 
             if p.exitcode == 0:
                 _logger.debug(f'{p} task success')
                 self.tasks_queue.task_done(task_id=d['meta']['id'])
                 continue
 
-            if p.exitcode == -15:
-                _logger.info(f'{p} taks terminated')
+            if manually_terminated:
+                _logger.info(f'{p} task terminated manually (cancelled)')
+                continue
+
+            if p.exitcode == -15 or manually_terminated:
+                _logger.info(f'{p} task terminated')
                 continue
 
             self.tasks_queue.allow_next_task()
@@ -52,3 +70,12 @@ class TasksProcessor(threading.Thread):
                 _logger.info(f"{p} task was faulty")
             else:
                 raise RuntimeError(f'{p} returned unknown exit code: {p.exitcode}')
+
+    def _emit_error(self, d: CommonTaskDict):
+        t = TaskOutputDict(
+            meta=d['meta'],
+            percent=0,
+            string="Cancelled",
+            status=TaskStatus.ERROR
+        )
+        self.output_queue.put(t)

@@ -18,6 +18,7 @@ from ..common.helpers import MB, KB
 from ..common.iopart2 import BufferedReaderWithCallback, ReadProgressInfo
 from ..common.stream_retreiver import retrieve_with_progress
 from .stubs.vaultdict import VaultDict
+from botocore.client import Config
 
 _logger = logging.getLogger(__name__)
 
@@ -58,7 +59,9 @@ def vault_name_from_arn(arn: str):
 class SurvturGlacier:
 
     def __init__(self, access_key_id: str, secret_access_key: str, region_name: str):
+        config = Config(connect_timeout=5, retries={'max_attempts': 0})
         self._b = boto3.client("glacier",
+                               config=config,
                                aws_access_key_id=access_key_id,
                                aws_secret_access_key=secret_access_key,
                                region_name=region_name)
